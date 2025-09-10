@@ -1,4 +1,10 @@
 This project contains SQL scripts and analysis for **Nifty 50 stock data**.
+## Datasets
+- `sectorsnifty50.csv` → sectors id
+- `companiesnifty50.csv` → Company sector classification
+- `nifty50_10yrs_up_to_2025.csv` → List of Nifty 50 companies
+- `Nifty 50 Historical Data2015_2022`.csv` → Historical price data of nifty
+
 It focuses on:
 - Loading and cleaning stock dataset
 - This covers almost important analysis which intrday or swing traders follows
