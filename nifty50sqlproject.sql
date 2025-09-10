@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS Companies (
     symbol VARCHAR(20) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
     sector_id INT NOT NULL,
-    FOREIGN KEY (sector_id) REFERENCES Sectors(sector_id)
+    FOREIGN KEY (sector_id)
+        REFERENCES Sectors (sector_id)
 );
 
 -- ================================
@@ -26,13 +27,14 @@ CREATE TABLE IF NOT EXISTS Companies (
 CREATE TABLE IF NOT EXISTS StockPrices (
     date DATE,
     symbol VARCHAR(20),
-    open DECIMAL(20,10),
-    high DECIMAL(20,10),
-    low DECIMAL(20,10),
-    close DECIMAL(20,10),
+    open DECIMAL(20 , 10 ),
+    high DECIMAL(20 , 10 ),
+    low DECIMAL(20 , 10 ),
+    close DECIMAL(20 , 10 ),
     volume BIGINT,
-    PRIMARY KEY (date, symbol),
-    FOREIGN KEY (symbol) REFERENCES Companies(symbol)
+    PRIMARY KEY (date , symbol),
+    FOREIGN KEY (symbol)
+        REFERENCES Companies (symbol)
 );
 
 
@@ -104,12 +106,12 @@ IGNORE 1 LINES
 CREATE TABLE NiftyIndex (
     id INT AUTO_INCREMENT PRIMARY KEY,
     `Date` DATE NOT NULL,
-    `Price` DECIMAL(16,4),
-    `Open` DECIMAL(16,4),
-    `High` DECIMAL(16,4),
-    `Low` DECIMAL(16,4),
+    `Price` DECIMAL(16 , 4 ),
+    `Open` DECIMAL(16 , 4 ),
+    `High` DECIMAL(16 , 4 ),
+    `Low` DECIMAL(16 , 4 ),
     `Vol.` BIGINT,
-    `Change %` DECIMAL(8,4)
+    `Change %` DECIMAL(8 , 4 )
 );
 
 -- 3. Insert clean data from staging
@@ -147,74 +149,85 @@ CREATE INDEX idx_niftyindex_date ON NiftyIndex(date);
 
 -- ======================================================================================================================
 -- Data Analysis
-
--- core market analysis
-/* ================
- 
- *********1. Sector Performance based on Monthly Average Close**********
-
-This query calculates the average closing price for stocks in each sector, grouped by month, to show how sectors perform over time.
+/*
+********1.Sector Performance based on Monthly Average Close*************
 */
-
-select s.sector_name,date_format(sp.date, '%Y-%m') as month,round(avg(sp.close)) as avg_close
-from StockPrices sp
-join Companies c on  sp.symbol = c.symbol
-join Sectors s on c.sector_id = s.sector_id
-group by s.sector_name, `month`
-order by `month`, s.sector_name;
+SELECT 
+    s.sector_name,
+    DATE_FORMAT(sp.date, '%Y-%m') AS month,
+    ROUND(AVG(sp.close)) AS avg_close
+FROM
+    StockPrices sp
+        JOIN
+    Companies c ON sp.symbol = c.symbol
+        JOIN
+    Sectors s ON c.sector_id = s.sector_id
+GROUP BY s.sector_name , `month`
+ORDER BY `month` , s.sector_name;
 
 /* =====================
-**********2. Most Volatile Companies (Std. Dev. of Prices)**********
+**********2.Most Volatile Companies (Std. Dev. of Prices)**********
 
 This query finds the companies with the most price fluctuations by calculating the standard deviation of their closing prices. Higher standard deviation means more volatility (bigger ups and downs).
 */
 
-select  symbol,round(stddev(close)) as volatality
-from StockPrices 
-group by symbol 
-order by volatality DESC;
+SELECT 
+    symbol, ROUND(STDDEV(close)) AS volatality
+FROM
+    StockPrices
+GROUP BY symbol
+ORDER BY volatality DESC;
 
 /*===================================
-*******3. Top Gainers & Losers (Last 30 Days % Change)**********
+*******3.Top Gainers & Losers (Last 30 Days % Change)**********
 This query looks at the last 30 days of data and calculates the percentage change in closing prices for each stock (from the lowest to highest price in that period). It's for gainers; for losers, change the ORDER BY to ASC.
 
 */
 
-select symbol,round(((max(close)-min(open))/min(close))*100,2) as percentage_change_month
-from StockPrices 
-where  date >= date_sub(curdate(),interval 30 day)
-group by symbol
-order by percentage_change_month desc;
+SELECT 
+    symbol,
+    ROUND(((MAX(close) - MIN(open)) / MIN(close)) * 100,
+            2) AS percentage_change_month
+FROM
+    StockPrices
+WHERE
+    date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+GROUP BY symbol
+ORDER BY percentage_change_month DESC;
 
 /*==================================
-**********4. NiftyIndex Trend vs Average Market Close of stocks **********
+**********4.NiftyIndex Trend vs Average Market Close of stocks **********
 This query compares the daily Nifty Index price to the average closing price of all stocks on the same day, to see if the index matches the overall market.
 */
 SELECT 
     ni.date,
-    MAX(ni.price) AS nifty_index_price,-- aggregated to satisfy ONLY_FULL_GROUP_BY
+    MAX(ni.price) AS nifty_index_price,
     ROUND(AVG(sp.close), 2) AS avg_market_close
-FROM NiftyIndex AS ni
-JOIN StockPrices sp ON ni.date = sp.date
+FROM
+    NiftyIndex AS ni
+        JOIN
+    StockPrices sp ON ni.date = sp.date
 GROUP BY ni.date
 ORDER BY ni.date;
 
 
 /*================================
-**********5. Highest Trading Volume Days**********
+**********5.Highest Trading Volume Days**********
 This query finds the top 10 days with the highest trading volume for any stock
 */
 
-select symbol,date,volume
-from  StockPrices
-order by volume desc;
+SELECT 
+    symbol, `date`, volume
+FROM
+    StockPrices
+ORDER BY volume DESC;
 
 
 
 -- =================================================================================================================================
 -- TECHNICAL ANALYSIS
 /*
-**********1. Simple Moving Average (SMA – 20-day example)**********
+**********1.Simple Moving Average (SMA – 20-day example)**********
 This query calculates a 20-day simple moving average (SMA) for each stock's closing price, which smooths out price data to identify trends.
 */
 
@@ -223,7 +236,7 @@ from StockPrices
 order by symbol,SMA_20 desc;
 
 /* =====================
-**********2. Relative Strength Index (RSI – 14-day)**********
+**********2.Relative Strength Index (RSI – 14-day)**********
 This query calculates the 14-day RSI, a momentum indicator that measures the speed and change of price movements to identify overbought or oversold conditions. It uses a CTE to first compute price changes, then average gains and losses.
 */
 WITH profit_loss AS (
@@ -249,7 +262,7 @@ FROM RSI
 ORDER BY  RSI_14 desc;
 
 /*=========================================
-**********4. Bollinger Bands**********
+**********3.Bollinger Bands**********
 This query computes Bollinger Bands for each stock: a 20-day SMA (middle band) plus/minus 2 standard deviations (upper/lower bands) to measure volatility.
 */
 
@@ -261,7 +274,7 @@ from StockPrices
 order by upper_bandwidth,`date`;
 
 /*==================================================
-********5.VWAP (Volume Weighted Average Price)********
+********4.VWAP (Volume Weighted Average Price)********
 
 VWAP gives the average price weighted by volume over a period ,commonly a day for intraday, or over multiple days if needed.
 
@@ -287,7 +300,7 @@ from StockPrices
 order by volume;
 
 /*===================
-**********2.Support & Resistance (Swing Highs / Swing Lows) Identify Swing Points**********
+**********2.(Swing Highs / Swing Lows) Identify Swing Points**********
 */
 
 select symbol,`date`,high,low,
